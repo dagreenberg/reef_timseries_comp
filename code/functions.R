@@ -204,8 +204,8 @@ ts_reef = function(X,sp){
 
 
 ###Time-series plot function###
-scaled_timeseries_plot<- function(i,ts1,ts2,sp,GZ,mod,params1,params2,path,TT,TT.rvc,n.iter,yr.start,yr.end){
-  pdf(file.path(path,paste(paste(i,sp,mod,GZ,sep='_'),'.pdf',sep='')),width=8,height=6)
+scaled_timeseries_plot<- function(i,ts1,ts2,sp,mod,params1,params2,path,TT,TT.rvc,n.iter,yr.start,yr.end){
+  pdf(file.path(path,paste(paste(i,sp,sep='_'),'.pdf',sep='')),width=8,height=6)
   
   #Extract parameters
   cuts1=as.data.frame(params1)[grepl('cut',colnames(params1))]
@@ -280,7 +280,7 @@ scaled_timeseries_plot<- function(i,ts1,ts2,sp,GZ,mod,params1,params2,path,TT,TT
       reef_coef[,12]<- apply(reef_coef[,6:10],1,abund_tranfs)
     }
     
-    if(ncol(params1[grepl('cut',colnames(params1))])==4){
+    if(ncol(cuts1)==4){
       if(mod=='model1'){
         reef_coef[,1]<- plogis(cuts1[,1]-y1.2[,i])
         reef_coef[,2]<-plogis(cuts1[,2]-y1.2[,i])-plogis(cuts1[,1]-y1.2[,i])
@@ -355,7 +355,7 @@ scaled_timeseries_plot<- function(i,ts1,ts2,sp,GZ,mod,params1,params2,path,TT,TT
   y_mat<- full_join(y_mat_reef,y_mat_rvc)
   
   par(xpd=T)
-  plot(y_mat$median.rvc~y_mat$year,type='n',ylim=c(min(x_mat),max(c(max(y_mat[,2]),max(x_mat)))),col='darkblue',bty='l',ylab=expression('Scaled Relative Abundance'),xlab='Year',main=paste(sp,GZ,sep=' - '))
+  plot(y_mat$median.rvc~y_mat$year,type='n',ylim=c(min(x_mat),max(c(max(y_mat[,2]),max(x_mat)))),col='darkblue',bty='l',ylab=expression('Scaled Relative Abundance'),xlab='Year',main=paste(sp))
  
   x<- c(y_mat$year, rev(y_mat$year))
   y1<- c(x_mat[,2], rev(x_mat[,3]))
@@ -761,6 +761,48 @@ timeseries_plot<- function(i,ts1,ts2,sp,GZ,mod,params1,params2,path,TT,TT.rvc,n.
   
 }
 
+ppc_comp_plot=function(emp1,emp2,yrep1,yrep2,pdf=FALSE,file.name=NA,path){
+  
+  dens.emp1=density(emp1$NUM.total2,bw=0.02)
+  dens.emp2=density(emp2$abundance2,bw=0.02)
+  
+  if(pdf==TRUE){
+    pdf(paste(path,'/',paste(file.name,'.pdf',sep=''),sep=''),width=8,height=5)
+  }
+  plot(dens.emp1$y~dens.emp1$x,type='l',bty='l',col='red',lwd=2,ylab='density',xlab='counts',main=paste(fish_reef_trim_3403_2$commonname[q],'RVC',sep='-'))
+  c.col=c('#ffffcc',
+          '#c7e9b4',
+          '#7fcdbb',
+          '#41b6c4',
+          '#2c7fb8',
+          '#253494')
+  text('empirical',x=par('usr')[2]*0.8,y=par('usr')[4]*0.9,col='red')
+  for(i in 1:6){
+    dens1=density(yrep1[,,i],bw=0.02)
+    lines(dens1$y~dens1$x,col=c.col[i])
+    text(paste('chain',i,sep=' '),x=par('usr')[2]*0.8,y=par('usr')[4]*(0.9-0.05*i),col=c.col[i])
+  }
+  
+  plot(dens.emp2$y~dens.emp2$x,type='l',bty='l',col='red',lwd=2,ylab='density',xlab='counts',main=paste(fish_reef_trim_3403_2$commonname[q],'REEF',sep='-'))
+  c.col=c('#ffffcc',
+          '#c7e9b4',
+          '#7fcdbb',
+          '#41b6c4',
+          '#2c7fb8',
+          '#253494')
+  text('empirical',x=par('usr')[2]*0.8,y=par('usr')[4]*0.9,col='red')
+  for(i in 1:6){
+    dens2=density(yrep2[,,i],bw=0.02)
+    lines(dens2$y~dens2$x,col=c.col[i])
+    text(paste('chain',i,sep=' '),x=par('usr')[2]*0.8,y=par('usr')[4]*(0.9-0.05*i),col=c.col[i])
+  }
+  if(pdf==TRUE){
+   dev.off()  
+  }
+}
+
+
+
 
 `%notin%`<- Negate(`%in%`)
 
@@ -851,3 +893,7 @@ ppd_plot_out=function(y,y_rep,file.path,mod,rvc){
 
 }
 
+mode=function(x){
+  d=density(x)
+  return(d$x[which.max(d$y)])
+}
