@@ -1,4 +1,4 @@
-functions {
+functions { //induced dirichlet prior from M. Betancourt - 
   real induced_dirichlet_lpdf(vector c, vector alpha, real phi) {
     int K = num_elements(c) + 1;
     vector[K - 1] sigma = inv_logit(phi - c);
@@ -68,6 +68,7 @@ parameters {
   ordered[K-1] cut; //cutpoints
   real<lower=1e-9> recip_phi; //inverse of overdispersion parameter
   vector[2] x0; //initial popn size - RVC/REEF
+  vector[2] u; //drift parameter - rvc/reef
   
   //deviations from intercept
   vector[Z1] beta1; //effort coefficients - RVC
@@ -125,7 +126,7 @@ transformed parameters{
  for(r in 1:2){
     x[1,r] = x0[r];
 	}
- //evolving state process
+ //evolving state process - random walk with drift
  for(t in 2:TT){
     x[t,] = x[t-1,] + q_mat[t-1,];
       }
@@ -184,10 +185,20 @@ model{
 }
 generated quantities {
   corr_matrix[2] Cor_t = multiply_lower_tri_self_transpose(Lcorr);
-   vector[N1+N2] log_lik;
-  for (i in 1:N1){log_lik[i] = neg_binomial_2_log_lpmf(y1[i]|x[year_id1[i],1]+ a_hab1[hab_class1[i]]*sd_hab1 + a_strat1[stratum1[i]]*sd_strat1 + a_mth1[mth1[i]]*sd_mth1+ a_psu[psu_yr[i]]*sd_psu+ X1[i]*beta1,phi);
+  vector[N1+N2] log_lik;
+  vector[N1] y_rep_rvc;
+  vector[N2] y_rep_reef;
+  
+  for (i in 1:N1){
+  log_lik[i] = neg_binomial_2_log_lpmf(y1[i]|a_yr1[year_id1[i]]+ a_hab1[hab_class1[i]]*sd_hab1 + a_strat1[stratum1[i]]*sd_strat1 + a_mth1[mth1[i]]*sd_mth1+ a_psu[psu_yr[i]]*sd_psu+ X1[i]*beta1,phi)
+  ;
+  y_rep_rvc[i] = neg_binomial_2_log_rng(a_yr1[year_id1[i]]+ a_hab1[hab_class1[i]]*sd_hab1 + a_strat1[stratum1[i]]*sd_strat1 + a_mth1[mth1[i]]*sd_mth1+ a_psu[psu_yr[i]]*sd_psu+ X1[i]*beta1,phi)
+  ;
 }
-for (z in 1:N2){log_lik[N1+z] = ordered_logistic_lpmf(y2[z]|x[year_id2[z],2]++ a_site[site[z]]*sd_site+ a_dv[diver[z]]*sd_dv+ a_hab2[hab_class2[z]]*sd_hab2 + a_strat2[stratum2[z]]*sd_strat2+a_dmy[dmy[z]]*sd_dmy+a_my[my[z]]*sd_my+ a_mth2[mth2[z]]*sd_mth2+X2[z]*beta2, cut);
+for (z in 1:N2){
+log_lik[N1+z] = ordered_logistic_lpmf(y2[z]|a_yr2[year_id2[z]]+ a_site[site[z]]*sd_site+ a_dv[diver[z]]*sd_dv+ a_hab2[hab_class2[z]]*sd_hab2 + a_strat2[stratum2[z]]*sd_strat2+a_dmy[dmy[z]]*sd_dmy+a_my[my[z]]*sd_my+ a_mth2[mth2[z]]*sd_mth2+X2[z]*beta2, cut);
+
+y_rep_reef[z]=ordered_logistic_rng(a_yr2[year_id2[z]]+ a_site[site[z]]*sd_site+ a_dv[diver[z]]*sd_dv+ a_hab2[hab_class2[z]]*sd_hab2 + a_strat2[stratum2[z]]*sd_strat2+a_dmy[dmy[z]]*sd_dmy+a_my[my[z]]*sd_my+ a_mth2[mth2[z]]*sd_mth2+X2[z]*beta2, cut);
  }
 }
 
